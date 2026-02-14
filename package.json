@@ -1,0 +1,20 @@
+{
+  "name": "ttg",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@types/parsimmon": "^1.10.9",
+    "typescript": "~5.6.2",
+    "vite": "^6.2.0"
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.13",
+    "parsimmon": "^1.18.1"
+  }
+}

@@ -1,0 +1,806 @@
+/* Color scheme */
+:root {
+  --primary: #2d3436;
+  --primary-dark: #1e2527;
+  --primary-light: #636e72;
+  --accent: #00b894;
+  --accent-dark: #00a381;
+  --accent-light: #55efc4;
+  --bg: #ffffff;
+  --bg-alt: #f5f6fa;
+  --text: #2d3436;
+  --text-light: #636e72;
+  --border: #dfe6e9;
+  --error: #d63031;
+}
+
+/* Base styles */
+body {
+  font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--bg);
+  margin: 0;
+  padding: 1em;
+}
+
+/* Header */
+.header {
+  border-radius: 10px;
+  margin-bottom: 1em;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  color: white;
+  padding: 1em 1.2em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header h1 {
+  margin: 0 0 0.3em 0;
+  font-size: 1.5em;
+}
+
+.header p {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 0.95em;
+}
+
+/* Input section */
+.input-section {
+  background: var(--bg-alt);
+  border-radius: 10px;
+  padding: 1em;
+  margin-bottom: 1em;
+  border: 1px solid var(--border);
+}
+
+.input-section h2 {
+  margin: 0 0 0.5em 0;
+  font-size: 1.1em;
+  color: var(--primary);
+}
+
+.input-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+
+.input-header h2 {
+  margin: 0;
+}
+
+.batch-toggle {
+  background-color: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4em 0.8em;
+  font-size: 0.9em;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.batch-toggle:hover {
+  background-color: var(--border);
+}
+
+/* Batch input textarea */
+.batch-input {
+  width: 100%;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 1em;
+  padding: 0.5em;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  resize: vertical;
+  margin-bottom: 0.5em;
+}
+
+.batch-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.15);
+}
+
+/* Parsed formulas list in batch mode */
+.parsed-list {
+  margin: 0.5em 0;
+  padding: 0.5em;
+  background: var(--bg);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.parsed-item {
+  padding: 0.2em 0;
+  font-family: 'Source Code Pro', monospace;
+}
+
+.parsed-item.has-error {
+  color: var(--error);
+}
+
+/* Formula inputs */
+.formula-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+}
+
+.formula-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  background: var(--bg);
+  padding: 0.5em;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.formula-row.has-error {
+  border-color: var(--error);
+  box-shadow: 0 0 0 2px rgba(214, 48, 49, 0.2);
+}
+
+.formula-row input[type="text"] {
+  flex: 1;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 1em;
+  padding: 0.4em 0.6em;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.formula-row input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 184, 148, 0.15);
+}
+
+.formula-row .error-msg {
+  color: var(--error);
+  font-size: 0.85em;
+  margin-left: 0.5em;
+}
+
+.formula-row .warning-msg {
+  color: #856404;
+  background: #fff3cd;
+  font-size: 0.85em;
+  margin-left: 0.5em;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+}
+
+.formula-row.has-warning {
+  border-color: #ffc107;
+}
+
+.formula-row .parsed-formula {
+  color: var(--text);
+  margin-left: 0.5em;
+}
+
+/* Buttons */
+button {
+  font-family: 'Source Sans Pro', sans-serif;
+  font-size: 0.95em;
+  padding: 0.4em 0.8em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+button.remove {
+  background: linear-gradient(135deg, #ff7675 0%, #d63031 100%);
+  color: white;
+  border: none;
+  font-weight: 600;
+}
+
+button.remove:hover {
+  background: linear-gradient(135deg, #d63031 0%, #c0392b 100%);
+}
+
+button.add {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+button.add:hover {
+  background: var(--border);
+}
+
+button.generate {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: white;
+  border: none;
+  padding: 0.7em 1.5em;
+  font-size: 1.1em;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 184, 148, 0.3);
+  margin-top: 0.5em;
+}
+
+button.generate:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 184, 148, 0.4);
+}
+
+button.generate:active {
+  transform: translateY(0);
+}
+
+button.generate:disabled {
+  background: var(--border);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* Syntax help */
+.syntax-help {
+  margin-top: 1em;
+  padding: 0.8em;
+  background: var(--bg);
+  border-radius: 8px;
+  font-size: 0.9em;
+  color: var(--text-light);
+}
+
+.syntax-help code {
+  font-family: 'Source Code Pro', monospace;
+  background: var(--bg-alt);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
+
+/* Truth table output */
+.output-section {
+  background: var(--bg-alt);
+  border-radius: 10px;
+  padding: 1em;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.output-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5em;
+}
+
+.output-header h2 {
+  margin: 0;
+  font-size: 1.1em;
+  color: var(--primary);
+}
+
+.toggle-label {
+  font-size: 0.9em;
+  color: var(--text-light);
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-label input {
+  margin-right: 0.3em;
+  cursor: pointer;
+}
+
+/* Truth table */
+table.truth-table {
+  border-collapse: collapse;
+  width: auto;
+  margin: 0 auto;
+}
+
+/* Header uses browser's default MathML font */
+table.truth-table th {
+  /* MathML elements will use the browser's math font */
+}
+
+/* Quasi-column number row */
+table.truth-table tr.quasi-number-row th {
+  font-size: 0.75em;
+  color: var(--text-light);
+  font-weight: 400;
+  padding: 0.1em 0.1em;
+  border-bottom: none;
+}
+
+/* Body uses monospace for truth values */
+table.truth-table td {
+  font-family: 'Source Code Pro', monospace;
+}
+
+table.truth-table th,
+table.truth-table td {
+  padding: 0.5em 0.8em;
+  text-align: center;
+  border: 1px solid var(--primary);
+  font-size: 1.1em;
+}
+
+/* Quasi-columns within formulas: horizontal borders only, tight spacing */
+table.truth-table th.quasi,
+table.truth-table td.quasi {
+  border-left: none;
+  border-right: none;
+  border-top: 1px solid var(--primary);
+  border-bottom: 1px solid var(--primary);
+  padding: 0.3em 0.1em;
+}
+
+/* Only body quasi-columns get smaller font */
+table.truth-table td.quasi {
+  font-size: 0.85em;
+}
+
+/* Header quasi-columns: no top border */
+table.truth-table th.quasi {
+  border-top: none;
+}
+
+/* Last row quasi-columns: no bottom border */
+table.truth-table tbody tr:last-child td.quasi {
+  border-bottom: none;
+}
+
+/* Keep separator border for last quasi-column before next formula */
+table.truth-table th.quasi.separator,
+table.truth-table td.quasi.separator {
+  border-right: 2px solid var(--primary);
+  padding-right: 1em;
+}
+
+/* Thin vertical lines between quasi-columns when shown */
+table.truth-table.show-quasi th.quasi,
+table.truth-table.show-quasi td.quasi {
+  border-left: 1px solid var(--border);
+}
+
+/* No left border on first quasi-column after separator */
+table.truth-table.show-quasi th.separator + th.quasi,
+table.truth-table.show-quasi td.separator + td.quasi {
+  border-left: none;
+}
+
+table.truth-table th {
+  background: var(--bg);
+  font-weight: 600;
+  color: var(--primary-dark);
+  border-top: none;
+}
+
+table.truth-table th:first-child {
+  border-left: none;
+}
+
+table.truth-table th:last-child {
+  border-right: none;
+}
+
+table.truth-table td {
+  border-top: none;
+}
+
+table.truth-table td:first-child {
+  border-left: none;
+}
+
+table.truth-table td:last-child {
+  border-right: none;
+}
+
+table.truth-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Alternating row colors only for multiple formulas */
+table.truth-table.multi-formula tbody tr:nth-child(even) {
+  background: #e8e8e8;
+}
+
+table.truth-table tr:hover {
+  background: rgba(0, 184, 148, 0.1);
+}
+
+table.truth-table tbody tr.highlighted,
+table.truth-table.multi-formula tbody tr.highlighted {
+  background: #fff59d;
+}
+
+table.truth-table tbody tr.highlighted:hover,
+table.truth-table.multi-formula tbody tr.highlighted:hover {
+  background: #fff176;
+}
+
+/* Separator between variables and formulas, and between formulas */
+table.truth-table th.separator,
+table.truth-table td.separator {
+  border-right: 2px solid var(--primary);
+  padding-right: 1em;
+}
+
+/* Padding on left side of cells after separator */
+table.truth-table th.separator + th,
+table.truth-table td.separator + td {
+  padding-left: 1em;
+}
+
+/* Padding on right side of last formula */
+table.truth-table th:last-child,
+table.truth-table td:last-child {
+  padding-right: 1em;
+}
+
+/* True/False styling */
+.val-true,
+.val-false {
+  color: var(--text);
+}
+
+/* Main connective column - red, same size as variable columns */
+.val-main {
+  color: var(--error);
+  font-weight: 600;
+  font-size: 1.3em;
+}
+
+/* Placeholder message */
+.placeholder {
+  color: var(--text-light);
+  font-style: italic;
+  padding: 2em;
+  text-align: center;
+}
+
+/* Links */
+a {
+  color: var(--accent-dark);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.header a {
+  color: var(--accent-light);
+}
+
+/* Download button */
+.download-btn {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.4em 0.8em;
+  font-size: 0.9em;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-left: auto;
+}
+
+.download-btn:hover {
+  background: var(--border);
+}
+
+/* Centered toggle container */
+.toggle-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5em;
+}
+
+/* Mode toggle (Calculator / Quiz) */
+.mode-toggle {
+  display: flex;
+  gap: 0;
+  margin: 0.8em 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  width: fit-content;
+}
+
+.mode-btn {
+  background: var(--bg);
+  border: none;
+  border-right: 1px solid var(--border);
+  padding: 0.5em 1.2em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.mode-btn:last-child {
+  border-right: none;
+}
+
+.mode-btn:hover:not(.active) {
+  background: var(--bg-alt);
+}
+
+.mode-btn.active {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: white;
+}
+
+/* Quiz dropdown */
+.quiz-select {
+  width: 2.8em;
+  height: 2em;
+  text-align: center;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 0.9em;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 0.2em;
+}
+
+.quiz-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 184, 148, 0.2);
+}
+
+.quiz-select.quiz-main {
+  font-weight: 600;
+  border-width: 2px;
+  font-size: 1em;
+  width: 3em;
+  height: 2.2em;
+}
+
+/* Quiz cell states */
+.quiz-select.correct {
+  background: #d4edda;
+  border-color: #27ae60;
+}
+
+.quiz-select.incorrect {
+  background: #f8d7da;
+  border-color: var(--error);
+}
+
+/* Locked quiz cell (dependencies not met) */
+.quiz-locked {
+  display: inline-block;
+  width: 2em;
+  height: 1.6em;
+  line-height: 1.6em;
+  text-align: center;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 0.9em;
+  color: var(--text-light);
+  background: var(--bg-alt);
+  border: 2px dashed var(--border);
+  border-radius: 4px;
+}
+
+.quiz-locked.quiz-main {
+  font-weight: 600;
+  font-size: 1em;
+  width: 2.2em;
+  height: 1.8em;
+  line-height: 1.8em;
+}
+
+/* Quiz controls section */
+.quiz-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1em;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8em 1em;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 1em;
+  border: 1px solid var(--border);
+}
+
+.quiz-actions {
+  display: flex;
+  gap: 0.5em;
+}
+
+.quiz-btn {
+  padding: 0.5em 1em;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quiz-btn.check {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: white;
+  border: none;
+}
+
+.quiz-btn.check:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 184, 148, 0.3);
+}
+
+.quiz-btn.reveal,
+.quiz-btn.reset {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.quiz-btn.reveal:hover,
+.quiz-btn.reset:hover {
+  background: var(--border);
+}
+
+.quiz-btn.reveal.active {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+/* Quiz statistics */
+.quiz-stats {
+  display: flex;
+  gap: 0.3em;
+  font-size: 0.95em;
+  color: var(--text-light);
+}
+
+.quiz-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.2em;
+}
+
+.quiz-stat-value {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.quiz-stat-correct {
+  color: #27ae60;
+}
+
+.quiz-stat-incorrect {
+  color: var(--error);
+}
+
+/* Connective Reference Floating Panel */
+.floating-panel {
+  position: fixed;
+  top: 10vh;
+  right: 2vw;
+  background: var(--bg);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8em 1em;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+  color: white;
+  border-radius: 10px 10px 0 0;
+  cursor: move;
+  user-select: none;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.1em;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 0 0.3em;
+  line-height: 1;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.modal-close:hover {
+  opacity: 1;
+}
+
+.modal-body {
+  padding: 1em;
+}
+
+/* Connective tables rows */
+.connective-row {
+  display: flex;
+  gap: 1em;
+  margin-bottom: 1em;
+}
+
+.connective-row:last-child {
+  margin-bottom: 0;
+}
+
+.connective-row.centered {
+  justify-content: center;
+}
+
+.connective-divider {
+  border-top: 3px double var(--primary);
+  margin: 0.5em 0 1em 0;
+}
+
+.connective-card {
+  background: var(--bg-alt);
+  border-radius: 8px;
+  padding: 0.8em;
+  border: 1px solid var(--border);
+  min-width: 140px;
+}
+
+.connective-card h4 {
+  margin: 0 0 0.5em 0;
+  font-size: 0.95em;
+  color: var(--primary);
+  text-align: center;
+}
+
+.connective-card table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 0.85em;
+}
+
+.connective-card th,
+.connective-card td {
+  padding: 0.3em 0.5em;
+  text-align: center;
+  border: 1px solid var(--border);
+}
+
+.connective-card th {
+  background: var(--bg);
+  font-weight: 600;
+}
+
+.connective-card td {
+  background: var(--bg);
+}
+
+/* Reference button */
+.ref-btn {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.3em 0.6em;
+  font-size: 0.85em;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: 0.5em;
+  transition: all 0.2s ease;
+}
+
+.ref-btn:hover {
+  background: var(--border);
+}
+

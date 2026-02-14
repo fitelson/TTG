@@ -1,0 +1,12 @@
+node_modules/
+truthtable/
+.DS_Store
+*.zip
+
+# Non-code files
+BUILD_LOG.md
+CHANGELOG.md
+PROJECT_SUMMARY.md
+Forbes_examples.txt
+claude_opener.txt
+Carnap-master/
