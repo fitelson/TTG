@@ -34,7 +34,7 @@ scp -r truthtable/* fitelson.org:/home/fitelson/www/www/truthtable/
 
 **MathML Rendering (`src/sentence_to_html.ts`)**: Converts sentences to MathML elements for proper mathematical typography.
 
-**UI (`src/main.ts`)**: Full UI re-renders on state change via `render()` function. Key state: `formulas` (parsed inputs), `currentResult` (generated table), `currentMode` ('calculator' | 'quiz'), `userAnswers` (quiz answers), `cellStatuses` (validation results).
+**UI (`src/main.ts`)**: Full UI re-renders on state change via `render()` function. Key state: `formulas` (parsed inputs), `currentResult` (generated table), `currentMode` ('calculator' | 'quiz'), `userAnswers` (quiz answers), `cellStatuses` (validation results). Includes a "Copy Formulae to Clipboard" button that appears when 2+ formulas have text entered.
 
 **DOM Helpers (`src/el.ts`)**: `el()` for HTML elements, `math_el()` for MathML elements.
 
