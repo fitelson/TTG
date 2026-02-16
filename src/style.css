@@ -314,6 +314,11 @@ table.truth-table tr.quasi-number-row th {
   border-bottom: none;
 }
 
+/* Match last-child right padding so number labels align with the column below */
+table.truth-table tr.quasi-number-row th:last-child {
+  padding-right: 1em;
+}
+
 /* Body uses monospace for truth values */
 table.truth-table td {
   font-family: 'Source Code Pro', monospace;
