@@ -194,6 +194,19 @@ function renderInputSection(): HTMLElement {
     })
     section.appendChild(addBtn)
 
+    const nonEmptyTexts = formulas.filter(f => f.text.trim() !== '').map(f => f.text.trim())
+    if (nonEmptyTexts.length > 1) {
+      const copyBtn = document.createElement('button')
+      copyBtn.className = 'add'
+      copyBtn.textContent = 'Copy Formulae to Clipboard'
+      copyBtn.style.marginTop = '0.5em'
+      copyBtn.style.marginLeft = '0.5em'
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(nonEmptyTexts.join('\n'))
+      })
+      section.appendChild(copyBtn)
+    }
+
   // Mode toggle (Calculator / Quiz)
   const modeContainer = el('div', { class: 'mode-toggle' })
 
