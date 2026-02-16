@@ -15,7 +15,12 @@ npm run build        # Production build (outputs to truthtable/)
 npm run preview      # Preview production build locally
 ```
 
-Deploy by uploading the `truthtable/` directory to a static hosting server.
+Deploy to production:
+
+```bash
+npm run build
+scp -r truthtable/* fitelson.org:/home/fitelson/www/www/truthtable/
+```
 
 ## Architecture
 
@@ -25,7 +30,7 @@ Deploy by uploading the `truthtable/` directory to a static hosting server.
 
 **Truth Table (`src/truth_table.ts`)**: Generates truth tables by evaluating formulas across all variable assignments.
 
-**Formula Layout (`src/formula_layout.ts`)**: Token-based layout system for "quasi-columns" showing intermediate sub-formula values. Each token is either text (parens, connective symbols) or a value (evaluation point).
+**Formula Layout (`src/formula_layout.ts`)**: Token-based layout system for "quasi-columns" showing intermediate sub-formula values. Each token is either text (parens, connective symbols) or a value (evaluation point). Quasi-column numbering is continuous across multiple formulas (counter is shared, not per-formula).
 
 **MathML Rendering (`src/sentence_to_html.ts`)**: Converts sentences to MathML elements for proper mathematical typography.
 
