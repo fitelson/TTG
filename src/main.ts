@@ -889,9 +889,9 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
     })
 
     // Numbered cells for formula quasi-columns
+    let valueNum = 1
     layouts.forEach((layout, formulaIdx) => {
       const isLastFormula = formulaIdx === layouts.length - 1
-      let valueNum = 1
       layout.tokens.forEach((token, tokenIdx) => {
         const isLastToken = tokenIdx === layout.tokens.length - 1
         const classes: string[] = ['quasi']
