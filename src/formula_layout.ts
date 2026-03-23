@@ -10,6 +10,15 @@ export type FormulaLayout = {
   tokens: FormulaToken[]
 }
 
+const binarySymbols: Record<string, string> = {
+  conjunction: '&',
+  disjunction: '\u2228',
+  conditional: '\u2192',
+  biconditional: '\u2194',
+  xor: '\u2295',
+  nand: '|',
+}
+
 // Generate layout tokens for a sentence
 export function layoutFormula(s: Sentence): FormulaLayout {
   const tokens: FormulaToken[] = []
@@ -42,52 +51,19 @@ export function layoutFormula(s: Sentence): FormulaLayout {
         break
 
       case 'conjunction':
-        if (!isTopLevel) emitText('(')
-        layout(s.left, false, false)
-        emitValue('&', s, isMainConnective)
-        layout(s.right, false, false)
-        if (!isTopLevel) emitText(')')
-        break
-
       case 'disjunction':
-        if (!isTopLevel) emitText('(')
-        layout(s.left, false, false)
-        emitValue('\u2228', s, isMainConnective)
-        layout(s.right, false, false)
-        if (!isTopLevel) emitText(')')
-        break
-
       case 'conditional':
-        if (!isTopLevel) emitText('(')
-        layout(s.left, false, false)
-        emitValue(' \u2192 ', s, isMainConnective)
-        layout(s.right, false, false)
-        if (!isTopLevel) emitText(')')
-        break
-
       case 'biconditional':
-        if (!isTopLevel) emitText('(')
-        layout(s.left, false, false)
-        emitValue(' \u2194 ', s, isMainConnective)
-        layout(s.right, false, false)
-        if (!isTopLevel) emitText(')')
-        break
-
       case 'xor':
+      case 'nand': {
+        const symbol = binarySymbols[s.tag]
         if (!isTopLevel) emitText('(')
         layout(s.left, false, false)
-        emitValue('\u2295', s, isMainConnective)
+        emitValue(symbol, s, isMainConnective)
         layout(s.right, false, false)
         if (!isTopLevel) emitText(')')
         break
-
-      case 'nand':
-        if (!isTopLevel) emitText('(')
-        layout(s.left, false, false)
-        emitValue('|', s, isMainConnective)
-        layout(s.right, false, false)
-        if (!isTopLevel) emitText(')')
-        break
+      }
     }
   }
 

@@ -1,6 +1,12 @@
 import { Sentence, Letter, letter_string } from './types'
 import { assert_exists } from './utils'
 
+// Compare letters for sorting (alphabetical, then by index)
+const comp_letters = (a: Letter, b: Letter): number => {
+  const cmp = a.id.localeCompare(b.id)
+  return cmp === 0 ? a.index - b.index : cmp
+}
+
 // A set of letters that handles id+index pairs properly
 export class LetterSet {
   private readonly map = new Map<string, Set<number>>()
@@ -20,25 +26,25 @@ export class LetterSet {
     const set = this.map.get(l.id)
     if (set === undefined) {
       this.map.set(l.id, new Set([l.index]))
-      this.all.push(l)
+      this.insertSorted(l)
       return true
     } else if (!set.has(l.index)) {
       set.add(l.index)
-      this.all.push(l)
+      this.insertSorted(l)
       return true
     }
     return false
   }
 
+  private insertSorted(l: Letter): void {
+    const idx = this.all.findIndex(existing => comp_letters(l, existing) < 0)
+    if (idx === -1) this.all.push(l)
+    else this.all.splice(idx, 0, l)
+  }
+
   size(): number { return this.all.length }
 
   toArray(): Letter[] { return [...this.all] }
-}
-
-// Compare letters for sorting (alphabetical, then by index)
-const comp_letters = (a: Letter, b: Letter): number => {
-  const cmp = a.id.localeCompare(b.id)
-  return cmp === 0 ? a.index - b.index : cmp
 }
 
 // Collect all letters from a sentence
@@ -104,7 +110,12 @@ export const generate_truth_table = (formulas: Sentence[]): TruthTableResult => 
     }
   }
 
-  const letters = allLetters.toArray().sort(comp_letters)
+  const letters = allLetters.toArray()
+
+  if (letters.length > 30) {
+    throw new Error(`Too many variables (${letters.length}). Maximum supported is 30.`)
+  }
+
   const n_states = letters.length === 0 ? 1 : Math.pow(2, letters.length)
   const rows: TruthTableRow[] = []
 

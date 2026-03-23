@@ -66,7 +66,7 @@ export const letter_to_html = (l: Letter, wrap_in_math_element: boolean = true):
 // Convert a single token (connective, letter, etc.) to MathML for table headers
 export const token_to_html = (text: string, wrap_in_math_element: boolean = true): MathMLElement => {
   // Determine if it's an operator or identifier
-  const isOperator = ['~', '∧', '∨', '→', '↔', '(', ')', '⊤', '⊥', '&', '⊕', '|'].includes(text.trim())
+  const isOperator = ['~', '∨', '→', '↔', '(', ')', '⊤', '⊥', '&', '⊕', '|'].includes(text.trim())
   const element = isOperator
     ? math_el('mo', {}, text)
     : math_el('mi', { mathvariant: 'normal' }, text)

@@ -13,6 +13,7 @@ npm install          # Install dependencies
 npm run dev          # Development server with hot reload
 npm run build        # Production build (outputs to truthtable/)
 npm run preview      # Preview production build locally
+npm run test         # Run test suite (vitest)
 ```
 
 Deploy to production:
@@ -24,19 +25,23 @@ scp -r truthtable/* fitelson.org:/home/fitelson/www/www/truthtable/
 
 ## Architecture
 
-**Parser (`src/parser.ts`)**: Parsimmon-based parser for propositional logic. Atoms are single capital letters A-Z. Connectives: `~` (not), `&` (and), `v` (or), `->` (conditional), `<->` (biconditional), `+` (XOR), `|` (NAND). Explicit grouping with parentheses is required for chained binary connectives (no precedence/associativity assumptions).
+**Parser (`src/parser.ts`)**: Parsimmon-based parser for propositional logic. Atoms are single capital letters A-Z. Connectives: `~` (not), `&` (and), `v` (or), `->` (conditional), `<->` (biconditional), `+` (XOR), `|` (NAND). Explicit grouping with parentheses is required for chained binary connectives (no precedence/associativity assumptions). Uses a single `Binary` rule with a `BinaryOp` sub-rule for all binary connectives.
 
 **Types (`src/types.ts`)**: Sentence AST with tagged union type (`letter`, `negation`, `conjunction`, `disjunction`, `conditional`, `biconditional`, `xor`, `nand`). Includes builders in `sentence` object and string conversion functions.
 
-**Truth Table (`src/truth_table.ts`)**: Generates truth tables by evaluating formulas across all variable assignments.
+**Truth Table (`src/truth_table.ts`)**: Generates truth tables by evaluating formulas across all variable assignments. `LetterSet` maintains sorted order internally. Maximum 30 variables supported.
 
-**Formula Layout (`src/formula_layout.ts`)**: Token-based layout system for "quasi-columns" showing intermediate sub-formula values. Each token is either text (parens, connective symbols) or a value (evaluation point). Quasi-column numbering is continuous across multiple formulas (counter is shared, not per-formula).
+**Formula Layout (`src/formula_layout.ts`)**: Token-based layout system for "quasi-columns" showing intermediate sub-formula values. Each token is either text (parens, connective symbols) or a value (evaluation point). Binary connective symbols use a shared `binarySymbols` lookup table. Quasi-column numbering is continuous across multiple formulas (counter is shared, not per-formula).
 
 **MathML Rendering (`src/sentence_to_html.ts`)**: Converts sentences to MathML elements for proper mathematical typography.
 
-**UI (`src/main.ts`)**: Full UI re-renders on state change via `render()` function. Key state: `formulas` (parsed inputs), `currentResult` (generated table), `currentMode` ('calculator' | 'quiz'), `userAnswers` (quiz answers), `cellStatuses` (validation results). Includes a "Copy Formulae to Clipboard" button that appears when 2+ formulas have text entered.
+**UI (`src/main.ts`)**: Full UI re-renders on state change via `render()` function with focus preservation. All application state is consolidated in a single typed `AppState` object. Key state fields: `formulas` (parsed inputs), `currentResult` (generated table), `currentMode` ('calculator' | 'quiz'), `userAnswers` (quiz answers), `cellStatuses` (validation results). Includes a "Copy Formulae to Clipboard" button that appears when 2+ formulas have text entered.
 
 **DOM Helpers (`src/el.ts`)**: `el()` for HTML elements, `math_el()` for MathML elements.
+
+## Testing
+
+Tests use vitest and live alongside source files (`src/*.test.ts`). Test suites cover the parser, evaluator, types, and formula layout modules.
 
 ## Quiz Mode Dependencies
 

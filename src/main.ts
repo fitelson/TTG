@@ -15,47 +15,116 @@ type FormulaInput = {
   warning: string | null
 }
 
-let formulas: FormulaInput[] = [{ text: '', parsed: null, error: null, warning: null }]
-let currentResult: TruthTableResult | null = null
-let showQuasiColumns: boolean = true
-let batchMode: boolean = false
-let batchText: string = ''
-let highlightedRows: Set<number> = new Set()
-let showConnectiveRef: boolean = false
-let connectiveRefPosition: { left: number, top: number } | null = null
-
-// Quiz Mode State
 type QuizMode = 'calculator' | 'quiz'
-let currentMode: QuizMode = 'calculator'
-let userAnswers: Map<string, 'T' | 'F'> = new Map()  // key: "row-formulaIdx-tokenIdx"
-let cellStatuses: Map<string, 'correct' | 'incorrect'> = new Map()
-let quizChecked: boolean = false
-let answersRevealed: boolean = false
-let savedAnswersBeforeReveal: Map<string, 'T' | 'F'> = new Map()
-let savedStatusesBeforeReveal: Map<string, 'correct' | 'incorrect'> = new Map()
-let savedQuizCheckedBeforeReveal: boolean = false
+
+type AppState = {
+  formulas: FormulaInput[]
+  currentResult: TruthTableResult | null
+  showQuasiColumns: boolean
+  batchMode: boolean
+  batchText: string
+  highlightedRows: Set<number>
+  showConnectiveRef: boolean
+  connectiveRefPosition: { left: number, top: number } | null
+  currentMode: QuizMode
+  userAnswers: Map<string, 'T' | 'F'>
+  cellStatuses: Map<string, 'correct' | 'incorrect'>
+  quizChecked: boolean
+  answersRevealed: boolean
+  savedAnswersBeforeReveal: Map<string, 'T' | 'F'>
+  savedStatusesBeforeReveal: Map<string, 'correct' | 'incorrect'>
+  savedQuizCheckedBeforeReveal: boolean
+}
+
+const state: AppState = {
+  formulas: [{ text: '', parsed: null, error: null, warning: null }],
+  currentResult: null,
+  showQuasiColumns: true,
+  batchMode: false,
+  batchText: '',
+  highlightedRows: new Set(),
+  showConnectiveRef: false,
+  connectiveRefPosition: null,
+  currentMode: 'calculator',
+  userAnswers: new Map(),
+  cellStatuses: new Map(),
+  quizChecked: false,
+  answersRevealed: false,
+  savedAnswersBeforeReveal: new Map(),
+  savedStatusesBeforeReveal: new Map(),
+  savedQuizCheckedBeforeReveal: false,
+}
 
 function resetQuizState() {
-  userAnswers.clear()
-  cellStatuses.clear()
-  quizChecked = false
-  answersRevealed = false
-  savedAnswersBeforeReveal.clear()
-  savedStatusesBeforeReveal.clear()
-  savedQuizCheckedBeforeReveal = false
+  state.userAnswers.clear()
+  state.cellStatuses.clear()
+  state.quizChecked = false
+  state.answersRevealed = false
+  state.savedAnswersBeforeReveal.clear()
+  state.savedStatusesBeforeReveal.clear()
+  state.savedQuizCheckedBeforeReveal = false
 }
 
 // DOM references
-const app = document.getElementById('app')!
+const app = (() => {
+  const el = document.getElementById('app')
+  if (!el) throw new Error('Missing #app element in document')
+  return el
+})()
+
+// Create assignment lookup from a row's assignment map
+function makeLookup(assignment: Map<string, boolean>): (l: Letter) => boolean {
+  return (l: Letter): boolean => {
+    const val = assignment.get(letter_string(l))
+    if (val === undefined) throw new Error(`Letter ${letter_string(l)} not found`)
+    return val
+  }
+}
 
 // Render the entire UI
 function render() {
+  // Save focus state
+  const activeEl = document.activeElement
+  let focusInfo:
+    | { type: 'input', index: number, selStart: number | null, selEnd: number | null }
+    | { type: 'select', cellId: string }
+    | null = null
+
+  if (activeEl instanceof HTMLInputElement && activeEl.closest('.formula-row')) {
+    const rows = Array.from(document.querySelectorAll('.formula-row'))
+    const rowIndex = rows.indexOf(activeEl.closest('.formula-row')!)
+    focusInfo = {
+      type: 'input',
+      index: rowIndex,
+      selStart: activeEl.selectionStart,
+      selEnd: activeEl.selectionEnd,
+    }
+  } else if (activeEl instanceof HTMLSelectElement && activeEl.dataset.cellId) {
+    focusInfo = { type: 'select', cellId: activeEl.dataset.cellId }
+  }
+
+  // Re-render
   app.innerHTML = ''
   app.appendChild(renderHeader())
   app.appendChild(renderInputSection())
   app.appendChild(renderOutputSection())
-  if (showConnectiveRef) {
+  if (state.showConnectiveRef) {
     app.appendChild(renderConnectiveRefModal())
+  }
+
+  // Restore focus
+  if (focusInfo?.type === 'input') {
+    const inputs = document.querySelectorAll('.formula-row input[type="text"]')
+    const input = inputs[focusInfo.index] as HTMLInputElement | undefined
+    if (input) {
+      input.focus()
+      if (focusInfo.selStart !== null && focusInfo.selEnd !== null) {
+        input.setSelectionRange(focusInfo.selStart, focusInfo.selEnd)
+      }
+    }
+  } else if (focusInfo?.type === 'select') {
+    const select = document.querySelector(`select[data-cell-id="${focusInfo.cellId}"]`) as HTMLSelectElement | undefined
+    select?.focus()
   }
 }
 
@@ -76,11 +145,11 @@ function renderInputSection(): HTMLElement {
 
   const batchBtn = document.createElement('button')
   batchBtn.className = 'batch-toggle'
-  batchBtn.textContent = batchMode ? 'Hide Batch Input' : 'Show Batch Input'
+  batchBtn.textContent = state.batchMode ? 'Hide Batch Input' : 'Show Batch Input'
   batchBtn.addEventListener('click', () => {
-    batchMode = !batchMode
-    if (!batchMode) {
-      batchText = ''
+    state.batchMode = !state.batchMode
+    if (!state.batchMode) {
+      state.batchText = ''
     }
     render()
   })
@@ -91,26 +160,26 @@ function renderInputSection(): HTMLElement {
   clearBtn.textContent = 'Clear'
   clearBtn.style.marginLeft = '0.5em'
   clearBtn.addEventListener('click', () => {
-    formulas = [{ text: '', parsed: null, error: null, warning: null }]
-    batchText = ''
-    currentResult = null
+    state.formulas = [{ text: '', parsed: null, error: null, warning: null }]
+    state.batchText = ''
+    state.currentResult = null
     render()
   })
   header.appendChild(clearBtn)
 
   section.appendChild(header)
 
-  if (batchMode) {
+  if (state.batchMode) {
     // Batch mode: textarea to enter multiple formulas at once (shown above individual inputs)
     const batchContainer = el('div', { class: 'batch-container' })
 
     const textarea = document.createElement('textarea')
     textarea.className = 'batch-input'
-    textarea.value = batchText
+    textarea.value = state.batchText
     textarea.placeholder = 'Enter one formula per line, e.g.:\nA -> B\n~A v B\nA <-> B'
     textarea.rows = 6
     textarea.addEventListener('input', (e) => {
-      batchText = (e.target as HTMLTextAreaElement).value
+      state.batchText = (e.target as HTMLTextAreaElement).value
     })
     batchContainer.appendChild(textarea)
 
@@ -121,13 +190,13 @@ function renderInputSection(): HTMLElement {
     loadBtn.style.marginTop = '0.5em'
     loadBtn.style.marginRight = '0.5em'
     loadBtn.addEventListener('click', () => {
-      const lines = batchText.split('\n').filter(l => l.trim())
+      const lines = state.batchText.split('\n').filter(l => l.trim())
       if (lines.length > 0) {
-        formulas = lines.map(text => ({ text, parsed: null, error: null, warning: null }))
-        formulas.forEach((_, i) => validateFormula(i))
+        state.formulas = lines.map(text => ({ text, parsed: null, error: null, warning: null }))
+        state.formulas.forEach((_, i) => validateFormula(i))
       }
-      batchMode = false
-      batchText = ''
+      state.batchMode = false
+      state.batchText = ''
       render()
     })
     batchContainer.appendChild(loadBtn)
@@ -137,7 +206,7 @@ function renderInputSection(): HTMLElement {
   // Individual formula inputs (always shown)
   const inputsContainer = el('div', { class: 'formula-inputs' })
 
-    formulas.forEach((formula, index) => {
+    state.formulas.forEach((formula, index) => {
       const row = el('div', { class: `formula-row${formula.error ? ' has-error' : ''}` })
 
       const input = document.createElement('input')
@@ -145,7 +214,7 @@ function renderInputSection(): HTMLElement {
       input.value = formula.text
       input.placeholder = `Formula ${index + 1} (e.g., A -> B)`
       input.addEventListener('input', (e) => {
-        formulas[index].text = (e.target as HTMLInputElement).value
+        state.formulas[index].text = (e.target as HTMLInputElement).value
         validateFormula(index)
         renderFormulaRow(row, index)
         updateGenerateButton()
@@ -166,13 +235,13 @@ function renderInputSection(): HTMLElement {
         }
       }
 
-      if (formulas.length > 1) {
+      if (state.formulas.length > 1) {
         const removeBtn = document.createElement('button')
         removeBtn.className = 'remove'
         removeBtn.textContent = '\u00D7'
         removeBtn.title = 'Remove formula'
         removeBtn.addEventListener('click', () => {
-          formulas.splice(index, 1)
+          state.formulas.splice(index, 1)
           render()
         })
         row.appendChild(removeBtn)
@@ -189,12 +258,12 @@ function renderInputSection(): HTMLElement {
     addBtn.textContent = '+ Add Formula'
     addBtn.style.marginTop = '0.5em'
     addBtn.addEventListener('click', () => {
-      formulas.push({ text: '', parsed: null, error: null, warning: null })
+      state.formulas.push({ text: '', parsed: null, error: null, warning: null })
       render()
     })
     section.appendChild(addBtn)
 
-    const nonEmptyTexts = formulas.filter(f => f.text.trim() !== '').map(f => f.text.trim())
+    const nonEmptyTexts = state.formulas.filter(f => f.text.trim() !== '').map(f => f.text.trim())
     if (nonEmptyTexts.length > 1) {
       const copyBtn = document.createElement('button')
       copyBtn.className = 'add'
@@ -202,7 +271,13 @@ function renderInputSection(): HTMLElement {
       copyBtn.style.marginTop = '0.5em'
       copyBtn.style.marginLeft = '0.5em'
       copyBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(nonEmptyTexts.join('\n'))
+        navigator.clipboard.writeText(nonEmptyTexts.join('\n')).then(() => {
+          copyBtn.textContent = 'Copied!'
+          setTimeout(() => { copyBtn.textContent = 'Copy Formulae to Clipboard' }, 1500)
+        }).catch(() => {
+          copyBtn.textContent = 'Copy failed'
+          setTimeout(() => { copyBtn.textContent = 'Copy Formulae to Clipboard' }, 1500)
+        })
       })
       section.appendChild(copyBtn)
     }
@@ -211,11 +286,11 @@ function renderInputSection(): HTMLElement {
   const modeContainer = el('div', { class: 'mode-toggle' })
 
   const calculatorBtn = document.createElement('button')
-  calculatorBtn.className = `mode-btn ${currentMode === 'calculator' ? 'active' : ''}`
+  calculatorBtn.className = `mode-btn ${state.currentMode === 'calculator' ? 'active' : ''}`
   calculatorBtn.textContent = 'Calculator'
   calculatorBtn.addEventListener('click', () => {
-    if (currentMode !== 'calculator') {
-      currentMode = 'calculator'
+    if (state.currentMode !== 'calculator') {
+      state.currentMode = 'calculator'
       resetQuizState()
       render()
     }
@@ -223,11 +298,11 @@ function renderInputSection(): HTMLElement {
   modeContainer.appendChild(calculatorBtn)
 
   const quizBtn = document.createElement('button')
-  quizBtn.className = `mode-btn ${currentMode === 'quiz' ? 'active' : ''}`
+  quizBtn.className = `mode-btn ${state.currentMode === 'quiz' ? 'active' : ''}`
   quizBtn.textContent = 'Quiz'
   quizBtn.addEventListener('click', () => {
-    if (currentMode !== 'quiz') {
-      currentMode = 'quiz'
+    if (state.currentMode !== 'quiz') {
+      state.currentMode = 'quiz'
       resetQuizState()
       render()
     }
@@ -239,8 +314,8 @@ function renderInputSection(): HTMLElement {
   // Generate button
   const generateBtn = document.createElement('button')
   generateBtn.className = 'generate'
-  generateBtn.textContent = currentMode === 'calculator' ? 'Calculate Truth Table(s)' : 'Start Quiz'
-  const nonEmptyFormulas = formulas.filter(f => f.text.trim() !== '')
+  generateBtn.textContent = state.currentMode === 'calculator' ? 'Calculate Truth Table(s)' : 'Start Quiz'
+  const nonEmptyFormulas = state.formulas.filter(f => f.text.trim() !== '')
   const allValid = nonEmptyFormulas.length > 0 && nonEmptyFormulas.every(f => f.parsed !== null)
   generateBtn.disabled = !allValid
   generateBtn.addEventListener('click', calculateTruthTables)
@@ -253,7 +328,7 @@ function renderInputSection(): HTMLElement {
   refBtn.style.marginTop = '0.5em'
   refBtn.style.marginLeft = '0.5em'
   refBtn.addEventListener('click', () => {
-    showConnectiveRef = true
+    state.showConnectiveRef = true
     render()
   })
   section.appendChild(refBtn)
@@ -265,7 +340,7 @@ function renderInputSection(): HTMLElement {
 }
 
 function renderFormulaRow(row: HTMLElement, index: number) {
-  const formula = formulas[index]
+  const formula = state.formulas[index]
   row.className = `formula-row${formula.error ? ' has-error' : ''}${formula.warning ? ' has-warning' : ''}`
 
   // Remove existing error/parsed/warning display
@@ -314,9 +389,9 @@ function renderConnectiveRefModal(): HTMLElement {
   const modal = el('div', { class: 'floating-panel' })
 
   // Apply saved position if available
-  if (connectiveRefPosition) {
-    modal.style.left = `${connectiveRefPosition.left}px`
-    modal.style.top = `${connectiveRefPosition.top}px`
+  if (state.connectiveRefPosition) {
+    modal.style.left = `${state.connectiveRefPosition.left}px`
+    modal.style.top = `${state.connectiveRefPosition.top}px`
     modal.style.right = 'auto'
   }
 
@@ -329,40 +404,36 @@ function renderConnectiveRefModal(): HTMLElement {
   closeBtn.className = 'modal-close'
   closeBtn.innerHTML = '&times;'
   closeBtn.addEventListener('click', () => {
-    showConnectiveRef = false
-    connectiveRefPosition = null  // Reset position when closed
+    state.showConnectiveRef = false
+    state.connectiveRefPosition = null
     render()
   })
   header.appendChild(closeBtn)
 
-  // Make modal draggable
-  let isDragging = false
-  let dragOffsetX = 0
-  let dragOffsetY = 0
-
+  // Make modal draggable — listeners added only during drag to avoid leaks
   header.addEventListener('mousedown', (e) => {
-    isDragging = true
     const rect = modal.getBoundingClientRect()
-    dragOffsetX = e.clientX - rect.left
-    dragOffsetY = e.clientY - rect.top
-    // Switch from right-positioned to left-positioned
+    const offsetX = e.clientX - rect.left
+    const offsetY = e.clientY - rect.top
     modal.style.left = `${rect.left}px`
     modal.style.top = `${rect.top}px`
     modal.style.right = 'auto'
-  })
 
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return
-    const newLeft = e.clientX - dragOffsetX
-    const newTop = e.clientY - dragOffsetY
-    modal.style.left = `${newLeft}px`
-    modal.style.top = `${newTop}px`
-    // Save position to state
-    connectiveRefPosition = { left: newLeft, top: newTop }
-  })
+    const onMouseMove = (ev: MouseEvent) => {
+      const newLeft = ev.clientX - offsetX
+      const newTop = ev.clientY - offsetY
+      modal.style.left = `${newLeft}px`
+      modal.style.top = `${newTop}px`
+      state.connectiveRefPosition = { left: newLeft, top: newTop }
+    }
 
-  document.addEventListener('mouseup', () => {
-    isDragging = false
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
   })
 
   modal.appendChild(header)
@@ -512,7 +583,7 @@ function renderOutputSection(): HTMLElement {
     el('h2', {}, 'Truth Table(s)')
   )
 
-  if (currentResult) {
+  if (state.currentResult) {
     // Download button on the right
     const imageBtn = document.createElement('button')
     imageBtn.className = 'download-btn'
@@ -524,7 +595,7 @@ function renderOutputSection(): HTMLElement {
 
   section.appendChild(header)
 
-  if (!currentResult) {
+  if (!state.currentResult) {
     section.appendChild(el('div', { class: 'placeholder' },
       'Enter formulae above and click "Calculate Truth Table(s)" to see the results.',
       el('br', {}),
@@ -534,14 +605,14 @@ function renderOutputSection(): HTMLElement {
   }
 
   // Centered toggle for quasi-columns (only in calculator mode)
-  if (currentMode === 'calculator') {
+  if (state.currentMode === 'calculator') {
     const toggleContainer = el('div', { class: 'toggle-container' })
     const toggleLabel = el('label', { class: 'toggle-label' })
     const checkbox = document.createElement('input')
     checkbox.type = 'checkbox'
-    checkbox.checked = showQuasiColumns
+    checkbox.checked = state.showQuasiColumns
     checkbox.addEventListener('change', () => {
-      showQuasiColumns = checkbox.checked
+      state.showQuasiColumns = checkbox.checked
       render()
     })
     toggleLabel.appendChild(checkbox)
@@ -551,32 +622,32 @@ function renderOutputSection(): HTMLElement {
   }
 
   // Quiz controls (only in quiz mode with a result)
-  if (currentMode === 'quiz') {
+  if (state.currentMode === 'quiz') {
     section.appendChild(renderQuizControls())
   }
 
-  section.appendChild(renderTruthTable(currentResult))
+  section.appendChild(renderTruthTable(state.currentResult))
   return section
 }
 
 function getQuizStats(): { total: number, filled: number, correct: number, incorrect: number } {
-  if (!currentResult) return { total: 0, filled: 0, correct: 0, incorrect: 0 }
+  if (!state.currentResult) return { total: 0, filled: 0, correct: 0, incorrect: 0 }
 
-  const layouts = currentResult.formulas.map(f => layoutFormula(f))
+  const layouts = state.currentResult.formulas.map(f => layoutFormula(f))
   let total = 0
   let filled = 0
   let correct = 0
   let incorrect = 0
 
-  currentResult.rows.forEach((_row, rowIdx) => {
+  state.currentResult.rows.forEach((_row, rowIdx) => {
     // Skip rows not selected for quiz
-    
+
     layouts.forEach((layout, formulaIdx) => {
       layout.tokens.forEach((token, tokenIdx) => {
         if (token.type !== 'value') return
         const isMain = token.isMain
         // In quiz mode, always show quasi-columns
-        const effectiveShowQuasi = currentMode === 'quiz' ? true : showQuasiColumns
+        const effectiveShowQuasi = state.currentMode === 'quiz' ? true : state.showQuasiColumns
         const showValue = effectiveShowQuasi || isMain
         if (!showValue) return
 
@@ -586,10 +657,10 @@ function getQuizStats(): { total: number, filled: number, correct: number, incor
 
         const cellId = `${rowIdx}-${formulaIdx}-${tokenIdx}`
         total++
-        if (userAnswers.has(cellId)) filled++
-        const status = cellStatuses.get(cellId)
-        if (status === 'correct') correct++
-        else if (status === 'incorrect') incorrect++
+        if (state.userAnswers.has(cellId)) filled++
+        const cellStatus = state.cellStatuses.get(cellId)
+        if (cellStatus === 'correct') correct++
+        else if (cellStatus === 'incorrect') incorrect++
       })
     })
   })
@@ -610,8 +681,8 @@ function renderQuizControls(): HTMLElement {
   actions.appendChild(checkBtn)
 
   const revealBtn = document.createElement('button')
-  revealBtn.className = `quiz-btn reveal ${answersRevealed ? 'active' : ''}`
-  revealBtn.textContent = answersRevealed ? 'Hide Answers' : 'Reveal Answers'
+  revealBtn.className = `quiz-btn reveal ${state.answersRevealed ? 'active' : ''}`
+  revealBtn.textContent = state.answersRevealed ? 'Hide Answers' : 'Reveal Answers'
   revealBtn.addEventListener('click', toggleRevealAnswers)
   actions.appendChild(revealBtn)
 
@@ -636,7 +707,7 @@ function renderQuizControls(): HTMLElement {
   )
   statsDiv.appendChild(progressSpan)
 
-  if (quizChecked) {
+  if (state.quizChecked) {
     const scoreSpan = el('span', { class: 'quiz-stat' },
       ` | Score: `,
       el('span', { class: 'quiz-stat-value quiz-stat-correct' }, `${stats.correct}`),
@@ -653,19 +724,15 @@ function renderQuizControls(): HTMLElement {
 }
 
 function checkAnswers() {
-  if (!currentResult) return
+  if (!state.currentResult) return
 
-  cellStatuses.clear()
-  const layouts = currentResult.formulas.map(f => layoutFormula(f))
+  state.cellStatuses.clear()
+  const layouts = state.currentResult.formulas.map(f => layoutFormula(f))
 
-  currentResult.rows.forEach((row, rowIdx) => {
+  state.currentResult.rows.forEach((row, rowIdx) => {
     // Skip rows not selected for quiz
-    
-    const lookup = (l: Letter): boolean => {
-      const val = row.assignment.get(letter_string(l))
-      if (val === undefined) throw new Error(`Letter ${letter_string(l)} not found`)
-      return val
-    }
+
+    const lookup = makeLookup(row.assignment)
 
     layouts.forEach((layout, formulaIdx) => {
       const evaluatedValues = evaluateLayout(layout, lookup)
@@ -676,7 +743,7 @@ function checkAnswers() {
 
         const evalResult = evaluatedValues[valueIdx++]
         // In quiz mode, always show quasi-columns
-        const effectiveShowQuasi = currentMode === 'quiz' ? true : showQuasiColumns
+        const effectiveShowQuasi = state.currentMode === 'quiz' ? true : state.showQuasiColumns
         const showValue = effectiveShowQuasi || evalResult.isMain
         if (!showValue) return
 
@@ -685,7 +752,7 @@ function checkAnswers() {
         if (isAtomicLetter) return  // Always auto-fill atomics
 
         const cellId = `${rowIdx}-${formulaIdx}-${tokenIdx}`
-        const userAnswer = userAnswers.get(cellId)
+        const userAnswer = state.userAnswers.get(cellId)
 
         if (userAnswer === undefined) {
           // Not filled - don't mark as correct or incorrect
@@ -694,41 +761,37 @@ function checkAnswers() {
 
         const correctAnswer = evalResult.value
         const isCorrect = (userAnswer === 'T') === correctAnswer
-        cellStatuses.set(cellId, isCorrect ? 'correct' : 'incorrect')
+        state.cellStatuses.set(cellId, isCorrect ? 'correct' : 'incorrect')
       })
     })
   })
 
-  quizChecked = true
+  state.quizChecked = true
   render()
 }
 
 function toggleRevealAnswers() {
-  if (!currentResult) return
+  if (!state.currentResult) return
 
-  if (answersRevealed) {
+  if (state.answersRevealed) {
     // Hide answers - restore saved state
-    userAnswers = new Map(savedAnswersBeforeReveal)
-    cellStatuses = new Map(savedStatusesBeforeReveal)
-    quizChecked = savedQuizCheckedBeforeReveal
-    answersRevealed = false
+    state.userAnswers = new Map(state.savedAnswersBeforeReveal)
+    state.cellStatuses = new Map(state.savedStatusesBeforeReveal)
+    state.quizChecked = state.savedQuizCheckedBeforeReveal
+    state.answersRevealed = false
     render()
     return
   }
 
   // Reveal answers - save current state first
-  savedAnswersBeforeReveal = new Map(userAnswers)
-  savedStatusesBeforeReveal = new Map(cellStatuses)
-  savedQuizCheckedBeforeReveal = quizChecked
+  state.savedAnswersBeforeReveal = new Map(state.userAnswers)
+  state.savedStatusesBeforeReveal = new Map(state.cellStatuses)
+  state.savedQuizCheckedBeforeReveal = state.quizChecked
 
-  const layouts = currentResult.formulas.map(f => layoutFormula(f))
+  const layouts = state.currentResult.formulas.map(f => layoutFormula(f))
 
-  currentResult.rows.forEach((row, rowIdx) => {
-    const lookup = (l: Letter): boolean => {
-      const val = row.assignment.get(letter_string(l))
-      if (val === undefined) throw new Error(`Letter ${letter_string(l)} not found`)
-      return val
-    }
+  state.currentResult.rows.forEach((row, rowIdx) => {
+    const lookup = makeLookup(row.assignment)
 
     layouts.forEach((layout, formulaIdx) => {
       const evaluatedValues = evaluateLayout(layout, lookup)
@@ -739,7 +802,7 @@ function toggleRevealAnswers() {
 
         const evalResult = evaluatedValues[valueIdx++]
         // In quiz mode, always show quasi-columns
-        const effectiveShowQuasi = currentMode === 'quiz' ? true : showQuasiColumns
+        const effectiveShowQuasi = state.currentMode === 'quiz' ? true : state.showQuasiColumns
         const showValue = effectiveShowQuasi || evalResult.isMain
         if (!showValue) return
 
@@ -747,14 +810,14 @@ function toggleRevealAnswers() {
         if (isAtomicLetter) return  // Always auto-fill atomics
 
         const cellId = `${rowIdx}-${formulaIdx}-${tokenIdx}`
-        userAnswers.set(cellId, evalResult.value ? 'T' : 'F')
-        cellStatuses.set(cellId, 'correct')
+        state.userAnswers.set(cellId, evalResult.value ? 'T' : 'F')
+        state.cellStatuses.set(cellId, 'correct')
       })
     })
   })
 
-  answersRevealed = true
-  quizChecked = true
+  state.answersRevealed = true
+  state.quizChecked = true
   render()
 }
 
@@ -764,13 +827,13 @@ function renderQuizCell(
   classes: string[]
 ): HTMLElement {
   const td = el('td', { class: classes.join(' ') })
-  const status = cellStatuses.get(cellId)
-  const userAnswer = userAnswers.get(cellId)
+  const cellStatus = state.cellStatuses.get(cellId)
+  const userAnswer = state.userAnswers.get(cellId)
 
   // Create dropdown
   const select = document.createElement('select')
   const selectClasses = ['quiz-select']
-  if (status) selectClasses.push(status)
+  if (cellStatus) selectClasses.push(cellStatus)
   if (evalResult.isMain) selectClasses.push('quiz-main')
   select.className = selectClasses.join(' ')
   select.dataset.cellId = cellId
@@ -796,13 +859,13 @@ function renderQuizCell(
 
   select.addEventListener('change', (e) => {
     const val = (e.target as HTMLSelectElement).value
-    if (val === 'T') userAnswers.set(cellId, 'T')
-    else if (val === 'F') userAnswers.set(cellId, 'F')
-    else userAnswers.delete(cellId)
+    if (val === 'T') state.userAnswers.set(cellId, 'T')
+    else if (val === 'F') state.userAnswers.set(cellId, 'F')
+    else state.userAnswers.delete(cellId)
 
     // Clear status if answer changed after checking
-    if (quizChecked) {
-      cellStatuses.delete(cellId)
+    if (state.quizChecked) {
+      state.cellStatuses.delete(cellId)
     }
 
     // Re-render to unlock dependent cells
@@ -844,7 +907,7 @@ function getSubformulaDependencies(s: Sentence): Sentence[] {
 
 function renderTruthTable(result: TruthTableResult): HTMLElement {
   // In quiz mode, always show quasi-columns
-  const effectiveShowQuasi = currentMode === 'quiz' ? true : showQuasiColumns
+  const effectiveShowQuasi = state.currentMode === 'quiz' ? true : state.showQuasiColumns
 
   const classes = ['truth-table']
   if (effectiveShowQuasi) classes.push('show-quasi')
@@ -907,12 +970,12 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
       const isLastFormula = formulaIdx === layouts.length - 1
       layout.tokens.forEach((token, tokenIdx) => {
         const isLastToken = tokenIdx === layout.tokens.length - 1
-        const classes: string[] = ['quasi']
-        if (!isLastFormula && isLastToken) classes.push('separator')
+        const tokenClasses: string[] = ['quasi']
+        if (!isLastFormula && isLastToken) tokenClasses.push('separator')
         if (token.type === 'value') {
-          numberRow.appendChild(el('th', { class: classes.join(' ') }, String(valueNum++)))
+          numberRow.appendChild(el('th', { class: tokenClasses.join(' ') }, String(valueNum++)))
         } else {
-          numberRow.appendChild(el('th', { class: classes.join(' ') }))
+          numberRow.appendChild(el('th', { class: tokenClasses.join(' ') }))
         }
       })
     })
@@ -936,9 +999,9 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
     const isLastFormula = formulaIdx === layouts.length - 1
     layout.tokens.forEach((token, tokenIdx) => {
       const isLastToken = tokenIdx === layout.tokens.length - 1
-      const classes: string[] = ['quasi']
-      if (!isLastFormula && isLastToken) classes.push('separator')
-      const th = el('th', { class: classes.join(' ') })
+      const tokenClasses: string[] = ['quasi']
+      if (!isLastFormula && isLastToken) tokenClasses.push('separator')
+      const th = el('th', { class: tokenClasses.join(' ') })
       th.appendChild(token_to_html(token.text))
       headerRow.appendChild(th)
     })
@@ -951,27 +1014,23 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
   const tbody = el('tbody', {})
   result.rows.forEach((row, rowIdx) => {
     // Row highlighting only in calculator mode
-    const tr = el('tr', currentMode === 'calculator' && highlightedRows.has(rowIdx) ? { class: 'highlighted' } : {})
+    const tr = el('tr', state.currentMode === 'calculator' && state.highlightedRows.has(rowIdx) ? { class: 'highlighted' } : {})
 
     // Row click for highlighting only in calculator mode
-    if (currentMode === 'calculator') {
+    if (state.currentMode === 'calculator') {
       tr.style.cursor = 'pointer'
       tr.addEventListener('click', () => {
-        if (highlightedRows.has(rowIdx)) {
-          highlightedRows.delete(rowIdx)
+        if (state.highlightedRows.has(rowIdx)) {
+          state.highlightedRows.delete(rowIdx)
         } else {
-          highlightedRows.add(rowIdx)
+          state.highlightedRows.add(rowIdx)
         }
         render()
       })
     }
 
     // Create assignment lookup function
-    const lookup = (l: Letter): boolean => {
-      const val = row.assignment.get(letter_string(l))
-      if (val === undefined) throw new Error(`Letter ${letter_string(l)} not found`)
-      return val
-    }
+    const lookup = makeLookup(row.assignment)
 
     // Variable values
     result.letters.forEach((letter, i) => {
@@ -1004,7 +1063,7 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
           const cellId = `${rowIdx}-${formulaIdx}-${tokenIdx}`
 
           // Determine if this cell should be quizzable
-          const isQuizMode = currentMode === 'quiz'
+          const isQuizMode = state.currentMode === 'quiz'
           const isAtomicLetter = token.type === 'value' && token.subformula.tag === 'letter'
           const shouldQuiz = isQuizMode && showValue && !isAtomicLetter
 
@@ -1013,7 +1072,7 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
           const deps = cellDependencies.get(cellKey) || []
           const depsAreFilled = deps.every(depKey => {
             const depCellId = `${rowIdx}-${depKey}`
-            return userAnswers.has(depCellId)
+            return state.userAnswers.has(depCellId)
           })
 
           if (!shouldQuiz) {
@@ -1043,15 +1102,15 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
 function updateGenerateButton() {
   const btn = document.querySelector('button.generate') as HTMLButtonElement | null
   if (btn) {
-    const nonEmptyFormulas = formulas.filter(f => f.text.trim() !== '')
+    const nonEmptyFormulas = state.formulas.filter(f => f.text.trim() !== '')
     const allValid = nonEmptyFormulas.length > 0 && nonEmptyFormulas.every(f => f.parsed !== null)
     btn.disabled = !allValid
   }
 }
 
 function clearTruthTable() {
-  if (currentResult !== null) {
-    currentResult = null
+  if (state.currentResult !== null) {
+    state.currentResult = null
     const outputSection = document.querySelector('.output-section')
     if (outputSection) {
       outputSection.replaceWith(renderOutputSection())
@@ -1082,7 +1141,7 @@ function hasUnnecessaryOuterParens(text: string, parsed: Sentence): boolean {
 }
 
 function validateFormula(index: number) {
-  const formula = formulas[index]
+  const formula = state.formulas[index]
   formula.warning = null
 
   if (formula.text.trim() === '') {
@@ -1107,23 +1166,23 @@ function validateFormula(index: number) {
 
 function calculateTruthTables() {
   // Clear highlighted rows
-  highlightedRows.clear()
+  state.highlightedRows.clear()
 
   // Validate all formulas
-  formulas.forEach((_, i) => validateFormula(i))
+  state.formulas.forEach((_, i) => validateFormula(i))
 
   // Filter to valid, non-empty formulas
-  const validFormulas = formulas
+  const validFormulas = state.formulas
     .filter(f => f.parsed !== null)
     .map(f => f.parsed!)
 
   if (validFormulas.length === 0) {
-    currentResult = null
+    state.currentResult = null
     render()
     return
   }
 
-  currentResult = generate_truth_table(validFormulas)
+  state.currentResult = generate_truth_table(validFormulas)
   render()
 }
 
