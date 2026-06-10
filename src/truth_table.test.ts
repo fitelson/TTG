@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { evaluate, generate_truth_table, LetterSet, collect_letters } from './truth_table'
-import { sentence, Letter } from './types'
+import { evaluate, generate_truth_table, LetterSet, collect_letters, MAX_TRUTH_TABLE_VARIABLES } from './truth_table'
+import { sentence, Letter, Sentence } from './types'
 
 const { letter, not, and, or, imp, iff, xor, nand } = sentence
 
@@ -199,5 +199,16 @@ describe('generate_truth_table', () => {
     const f = imp(and(letter('A'), letter('B')), letter('C'))
     const result = generate_truth_table([f])
     expect(result.rows.length).toBe(8) // 2^3
+  })
+
+  it('rejects formulas with too many variables before generating rows', () => {
+    const letters = Array.from({ length: MAX_TRUTH_TABLE_VARIABLES + 1 }, (_, i) =>
+      letter(String.fromCharCode('A'.charCodeAt(0) + i))
+    )
+    const formula = letters.slice(1).reduce<Sentence>((acc, next) => and(acc, next), letters[0]!)
+
+    expect(() => generate_truth_table([formula])).toThrow(
+      `Too many variables (${MAX_TRUTH_TABLE_VARIABLES + 1}). Maximum supported is ${MAX_TRUTH_TABLE_VARIABLES}.`
+    )
   })
 })

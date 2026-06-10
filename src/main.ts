@@ -2,8 +2,8 @@ import './style.css'
 import { el } from './el'
 import { parse_sentence } from './parser'
 import { generate_truth_table, TruthTableResult } from './truth_table'
-import { Sentence, letter_string, Letter, sentence_to_string_compact } from './types'
-import { layoutFormula, FormulaLayout, evaluateLayout } from './formula_layout'
+import { Sentence, letter_string, Letter } from './types'
+import { layoutFormula, FormulaLayout, evaluateLayout, buildCellDependencies } from './formula_layout'
 import { sentence_to_html, letter_to_html, token_to_html } from './sentence_to_html'
 import { toPng } from 'html-to-image'
 
@@ -20,6 +20,7 @@ type QuizMode = 'calculator' | 'quiz'
 type AppState = {
   formulas: FormulaInput[]
   currentResult: TruthTableResult | null
+  outputError: string | null
   showQuasiColumns: boolean
   batchMode: boolean
   batchText: string
@@ -39,6 +40,7 @@ type AppState = {
 const state: AppState = {
   formulas: [{ text: '', parsed: null, error: null, warning: null }],
   currentResult: null,
+  outputError: null,
   showQuasiColumns: true,
   batchMode: false,
   batchText: '',
@@ -163,6 +165,8 @@ function renderInputSection(): HTMLElement {
     state.formulas = [{ text: '', parsed: null, error: null, warning: null }]
     state.batchText = ''
     state.currentResult = null
+    state.outputError = null
+    resetQuizState()
     render()
   })
   header.appendChild(clearBtn)
@@ -596,6 +600,11 @@ function renderOutputSection(): HTMLElement {
   section.appendChild(header)
 
   if (!state.currentResult) {
+    if (state.outputError) {
+      section.appendChild(el('div', { class: 'error-msg output-error' }, state.outputError))
+      return section
+    }
+
     section.appendChild(el('div', { class: 'placeholder' },
       'Enter formulae above and click "Calculate Truth Table(s)" to see the results.',
       el('br', {}),
@@ -888,23 +897,6 @@ function renderLockedCell(
   return td
 }
 
-// Get the direct sub-formulas that a connective depends on
-function getSubformulaDependencies(s: Sentence): Sentence[] {
-  switch (s.tag) {
-    case 'value':
-    case 'letter':
-      return []
-    case 'negation':
-      return s.sentence.tag === 'letter' || s.sentence.tag === 'value' ? [] : [s.sentence]
-    default:
-      // Binary connectives
-      const deps: Sentence[] = []
-      if (s.left.tag !== 'letter' && s.left.tag !== 'value') deps.push(s.left)
-      if (s.right.tag !== 'letter' && s.right.tag !== 'value') deps.push(s.right)
-      return deps
-  }
-}
-
 function renderTruthTable(result: TruthTableResult): HTMLElement {
   // In quiz mode, always show quasi-columns
   const effectiveShowQuasi = state.currentMode === 'quiz' ? true : state.showQuasiColumns
@@ -917,39 +909,7 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
   // Pre-compute layouts for all formulas
   const layouts: FormulaLayout[] = result.formulas.map(f => layoutFormula(f))
 
-  // Build a map from subformula key to cell location (for dependency tracking)
-  // Key: sentence_to_string_compact of subformula
-  // Value: { formulaIdx, tokenIdx }
-  const subformulaToCell = new Map<string, { formulaIdx: number, tokenIdx: number }>()
-  layouts.forEach((layout, formulaIdx) => {
-    layout.tokens.forEach((token, tokenIdx) => {
-      if (token.type === 'value' && token.subformula.tag !== 'letter' && token.subformula.tag !== 'value') {
-        const key = sentence_to_string_compact(token.subformula)
-        subformulaToCell.set(key, { formulaIdx, tokenIdx })
-      }
-    })
-  })
-
-  // Build dependency map: cellKey -> array of cellKeys it depends on
-  const cellDependencies = new Map<string, string[]>()
-  layouts.forEach((layout, formulaIdx) => {
-    layout.tokens.forEach((token, tokenIdx) => {
-      if (token.type === 'value' && token.subformula.tag !== 'letter' && token.subformula.tag !== 'value') {
-        const deps = getSubformulaDependencies(token.subformula)
-        const depCellKeys: string[] = []
-        for (const dep of deps) {
-          const depKey = sentence_to_string_compact(dep)
-          const depCell = subformulaToCell.get(depKey)
-          if (depCell) {
-            // Dependency cell key format: "formulaIdx-tokenIdx" (row will be added when checking)
-            depCellKeys.push(`${depCell.formulaIdx}-${depCell.tokenIdx}`)
-          }
-        }
-        const cellKey = `${formulaIdx}-${tokenIdx}`
-        cellDependencies.set(cellKey, depCellKeys)
-      }
-    })
-  })
+  const cellDependencies = buildCellDependencies(layouts)
 
   // Header rows
   const thead = el('thead', {})
@@ -1109,8 +1069,10 @@ function updateGenerateButton() {
 }
 
 function clearTruthTable() {
-  if (state.currentResult !== null) {
+  if (state.currentResult !== null || state.outputError !== null) {
     state.currentResult = null
+    state.outputError = null
+    resetQuizState()
     const outputSection = document.querySelector('.output-section')
     if (outputSection) {
       outputSection.replaceWith(renderOutputSection())
@@ -1167,6 +1129,8 @@ function validateFormula(index: number) {
 function calculateTruthTables() {
   // Clear highlighted rows
   state.highlightedRows.clear()
+  state.outputError = null
+  resetQuizState()
 
   // Validate all formulas
   state.formulas.forEach((_, i) => validateFormula(i))
@@ -1182,7 +1146,12 @@ function calculateTruthTables() {
     return
   }
 
-  state.currentResult = generate_truth_table(validFormulas)
+  try {
+    state.currentResult = generate_truth_table(validFormulas)
+  } catch (error) {
+    state.currentResult = null
+    state.outputError = error instanceof Error ? error.message : 'Unable to generate truth table.'
+  }
   render()
 }
 

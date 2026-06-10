@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { layoutFormula, evaluateLayout } from './formula_layout'
+import { layoutFormula, evaluateLayout, buildCellDependencies } from './formula_layout'
 import { sentence, Letter } from './types'
 
 const { letter, not, and, or, imp } = sentence
@@ -98,5 +98,29 @@ describe('evaluateLayout', () => {
     const values = evaluateLayout(layout, assign)
     // A, &(A&B), B, ->(main), C = 5 value tokens
     expect(values.length).toBe(5)
+  })
+})
+
+describe('buildCellDependencies', () => {
+  it('scopes dependencies to the formula that owns the subformula occurrence', () => {
+    const A = letter('A')
+    const B = letter('B')
+    const firstFormula = imp(and(A, B), letter('C'))
+    const secondFormula = and(A, B)
+    const layouts = [layoutFormula(firstFormula), layoutFormula(secondFormula)]
+
+    const dependencies = buildCellDependencies(layouts)
+
+    expect(dependencies.get('0-5')).toEqual(['0-2'])
+  })
+
+  it('tracks multiple occurrences inside the same formula separately', () => {
+    const left = and(letter('A'), letter('B'))
+    const right = and(letter('A'), letter('B'))
+    const layouts = [layoutFormula(imp(left, right))]
+
+    const dependencies = buildCellDependencies(layouts)
+
+    expect(dependencies.get('0-5')).toEqual(['0-2', '0-8'])
   })
 })

@@ -466,6 +466,12 @@ table.truth-table td:last-child {
   text-align: center;
 }
 
+.output-error {
+  color: var(--error);
+  padding: 2em;
+  text-align: center;
+}
+
 /* Links */
 a {
   color: var(--accent-dark);
@@ -808,4 +814,3 @@ a:hover {
 .ref-btn:hover {
   background: var(--border);
 }
-

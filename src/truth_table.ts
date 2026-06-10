@@ -1,6 +1,8 @@
 import { Sentence, Letter, letter_string } from './types'
 import { assert_exists } from './utils'
 
+export const MAX_TRUTH_TABLE_VARIABLES = 12
+
 // Compare letters for sorting (alphabetical, then by index)
 const comp_letters = (a: Letter, b: Letter): number => {
   const cmp = a.id.localeCompare(b.id)
@@ -112,8 +114,8 @@ export const generate_truth_table = (formulas: Sentence[]): TruthTableResult => 
 
   const letters = allLetters.toArray()
 
-  if (letters.length > 30) {
-    throw new Error(`Too many variables (${letters.length}). Maximum supported is 30.`)
+  if (letters.length > MAX_TRUTH_TABLE_VARIABLES) {
+    throw new Error(`Too many variables (${letters.length}). Maximum supported is ${MAX_TRUTH_TABLE_VARIABLES}.`)
   }
 
   const n_states = letters.length === 0 ? 1 : Math.pow(2, letters.length)
