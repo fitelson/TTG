@@ -29,9 +29,9 @@ scp -r truthtable/* fitelson.org:/home/fitelson/www/www/truthtable/
 
 **Types (`src/types.ts`)**: Sentence AST with tagged union type (`letter`, `negation`, `conjunction`, `disjunction`, `conditional`, `biconditional`, `xor`, `nand`). Includes builders in `sentence` object and string conversion functions.
 
-**Truth Table (`src/truth_table.ts`)**: Generates truth tables by evaluating formulas across all variable assignments. `LetterSet` maintains sorted order internally. Maximum 30 variables supported.
+**Truth Table (`src/truth_table.ts`)**: Generates truth tables by evaluating formulas across all variable assignments. `LetterSet` maintains sorted order internally. Browser-facing generation is capped at 12 variables via `MAX_TRUTH_TABLE_VARIABLES`; the UI catches the error and displays it in the output section.
 
-**Formula Layout (`src/formula_layout.ts`)**: Token-based layout system for "quasi-columns" showing intermediate sub-formula values. Each token is either text (parens, connective symbols) or a value (evaluation point). Binary connective symbols use a shared `binarySymbols` lookup table. Quasi-column numbering is continuous across multiple formulas (counter is shared, not per-formula).
+**Formula Layout (`src/formula_layout.ts`)**: Token-based layout system for "quasi-columns" showing intermediate sub-formula values. Each token is either text (parens, connective symbols) or a value (evaluation point). Binary connective symbols use a shared `binarySymbols` lookup table. Quasi-column numbering is continuous across multiple formulas (counter is shared, not per-formula). Quiz dependency maps are built from actual subformula object occurrences within each formula, not global string keys, so duplicate subformulas in other formulas do not collide.
 
 **MathML Rendering (`src/sentence_to_html.ts`)**: Converts sentences to MathML elements for proper mathematical typography.
 
@@ -45,4 +45,8 @@ Tests use vitest and live alongside source files (`src/*.test.ts`). Test suites 
 
 ## Quiz Mode Dependencies
 
-In quiz mode, cells are locked (show "?") until prerequisite sub-formulas are filled. Dependency tracking uses `sentence_to_string_compact()` to identify sub-formulas.
+In quiz mode, cells are locked (show "?") until prerequisite sub-formulas are filled. Dependency tracking is built by `buildCellDependencies(layouts)` in `src/formula_layout.ts` and returns dependency cell keys in `"formulaIdx-tokenIdx"` form. Quiz state should be reset whenever generating a new table or clearing the current table to avoid stale answer/status maps reusing old cell IDs.
+
+## Recent Fixes
+
+- 2026-06-10: commit `038cc71` fixed large-table freezes, stale quiz state across recalculation, and duplicate-subformula dependency collisions. Verified with `npm test`, `npm run build`, and browser checks for the 13-atom guard plus `(A & B) -> C` / `A & B` quiz dependency behavior; deployed to `fitelson.org/truthtable`.
