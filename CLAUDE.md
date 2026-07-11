@@ -49,4 +49,5 @@ In quiz mode, cells are locked (show "?") until prerequisite sub-formulas are fi
 
 ## Recent Fixes
 
+- 2026-07-11: fixed stale truth-table output after removing or batch-replacing formulas, made quiz prerequisite changes clear all transitive dependent answers/statuses, corrected the PNG-export error message, added DOM regression tests, and upgraded the audited Vite toolchain. Verified with 84 tests, a production build, and a zero-vulnerability `npm audit`.
 - 2026-06-10: commit `038cc71` fixed large-table freezes, stale quiz state across recalculation, and duplicate-subformula dependency collisions. Verified with `npm test`, `npm run build`, and browser checks for the 13-atom guard plus `(A & B) -> C` / `A & B` quiz dependency behavior; deployed to `fitelson.org/truthtable`.

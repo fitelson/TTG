@@ -3,7 +3,14 @@ import { el } from './el'
 import { parse_sentence } from './parser'
 import { generate_truth_table, TruthTableResult } from './truth_table'
 import { Sentence, letter_string, Letter } from './types'
-import { layoutFormula, FormulaLayout, evaluateLayout, buildCellDependencies } from './formula_layout'
+import {
+  layoutFormula,
+  FormulaLayout,
+  evaluateLayout,
+  buildCellDependencies,
+  CellDependencyMap,
+  getTransitiveDependents,
+} from './formula_layout'
 import { sentence_to_html, letter_to_html, token_to_html } from './sentence_to_html'
 import { toPng } from 'html-to-image'
 
@@ -65,6 +72,13 @@ function resetQuizState() {
   state.savedAnswersBeforeReveal.clear()
   state.savedStatusesBeforeReveal.clear()
   state.savedQuizCheckedBeforeReveal = false
+}
+
+function invalidateTruthTableState() {
+  state.currentResult = null
+  state.outputError = null
+  state.highlightedRows.clear()
+  resetQuizState()
 }
 
 // DOM references
@@ -198,6 +212,7 @@ function renderInputSection(): HTMLElement {
       if (lines.length > 0) {
         state.formulas = lines.map(text => ({ text, parsed: null, error: null, warning: null }))
         state.formulas.forEach((_, i) => validateFormula(i))
+        invalidateTruthTableState()
       }
       state.batchMode = false
       state.batchText = ''
@@ -246,6 +261,7 @@ function renderInputSection(): HTMLElement {
         removeBtn.title = 'Remove formula'
         removeBtn.addEventListener('click', () => {
           state.formulas.splice(index, 1)
+          invalidateTruthTableState()
           render()
         })
         row.appendChild(removeBtn)
@@ -572,7 +588,7 @@ async function downloadAsImage() {
     link.click()
   } catch (error) {
     console.error('Failed to generate image:', error)
-    alert('Failed to generate image. Please try the PDF option instead.')
+    alert('Failed to generate image. Please try again.')
   } finally {
     // Remove the wrapper
     document.body.removeChild(wrapper)
@@ -832,6 +848,9 @@ function toggleRevealAnswers() {
 
 function renderQuizCell(
   cellId: string,
+  rowIdx: number,
+  cellKey: string,
+  dependencies: CellDependencyMap,
   evalResult: { value: boolean, isMain: boolean },
   classes: string[]
 ): HTMLElement {
@@ -871,6 +890,14 @@ function renderQuizCell(
     if (val === 'T') state.userAnswers.set(cellId, 'T')
     else if (val === 'F') state.userAnswers.set(cellId, 'F')
     else state.userAnswers.delete(cellId)
+
+    // A dependent answer was based on the previous prerequisite value. Clear
+    // all downstream work so locked cells cannot remain invisibly answered.
+    for (const dependentKey of getTransitiveDependents(dependencies, cellKey)) {
+      const dependentCellId = `${rowIdx}-${dependentKey}`
+      state.userAnswers.delete(dependentCellId)
+      state.cellStatuses.delete(dependentCellId)
+    }
 
     // Clear status if answer changed after checking
     if (state.quizChecked) {
@@ -1046,7 +1073,14 @@ function renderTruthTable(result: TruthTableResult): HTMLElement {
             tr.appendChild(renderLockedCell(evalResult, cellClasses))
           } else {
             // Quiz mode with dependencies met: show dropdown
-            tr.appendChild(renderQuizCell(cellId, evalResult, cellClasses))
+            tr.appendChild(renderQuizCell(
+              cellId,
+              rowIdx,
+              cellKey,
+              cellDependencies,
+              evalResult,
+              cellClasses
+            ))
           }
         }
       })
@@ -1070,9 +1104,7 @@ function updateGenerateButton() {
 
 function clearTruthTable() {
   if (state.currentResult !== null || state.outputError !== null) {
-    state.currentResult = null
-    state.outputError = null
-    resetQuizState()
+    invalidateTruthTableState()
     const outputSection = document.querySelector('.output-section')
     if (outputSection) {
       outputSection.replaceWith(renderOutputSection())

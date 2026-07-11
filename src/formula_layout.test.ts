@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { layoutFormula, evaluateLayout, buildCellDependencies } from './formula_layout'
+import {
+  layoutFormula,
+  evaluateLayout,
+  buildCellDependencies,
+  getTransitiveDependents,
+} from './formula_layout'
 import { sentence, Letter } from './types'
 
 const { letter, not, and, or, imp } = sentence
@@ -122,5 +127,20 @@ describe('buildCellDependencies', () => {
     const dependencies = buildCellDependencies(layouts)
 
     expect(dependencies.get('0-5')).toEqual(['0-2', '0-8'])
+  })
+})
+
+describe('getTransitiveDependents', () => {
+  it('finds direct and indirect dependents without including unrelated cells', () => {
+    const dependencies = new Map([
+      ['0-2', []],
+      ['0-5', ['0-2']],
+      ['0-8', ['0-5']],
+      ['1-2', []],
+    ])
+
+    expect(getTransitiveDependents(dependencies, '0-2')).toEqual(
+      new Set(['0-5', '0-8'])
+    )
   })
 })

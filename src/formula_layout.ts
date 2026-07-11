@@ -12,6 +12,26 @@ export type FormulaLayout = {
 
 export type CellDependencyMap = Map<string, string[]>
 
+// Return every cell that directly or indirectly depends on the changed cell.
+export function getTransitiveDependents(
+  dependencies: CellDependencyMap,
+  changedCellKey: string
+): Set<string> {
+  const dependents = new Set<string>()
+  const queue = [changedCellKey]
+
+  while (queue.length > 0) {
+    const dependency = queue.shift()!
+    for (const [cellKey, cellDependencies] of dependencies) {
+      if (dependents.has(cellKey) || !cellDependencies.includes(dependency)) continue
+      dependents.add(cellKey)
+      queue.push(cellKey)
+    }
+  }
+
+  return dependents
+}
+
 const binarySymbols: Record<string, string> = {
   conjunction: '&',
   disjunction: '\u2228',
