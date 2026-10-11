@@ -27,11 +27,23 @@ Chained binary connectives require explicit grouping (e.g., `(P v Q) v R`, not `
 
 ## Build
 
+Requires Node.js `^22.22.2`, `^24.15.0`, or `>=26.0.0`; the repository records npm 12.2.0 as its package manager.
+
 ```bash
 npm install
 npm run dev       # development server
 npm run build     # production build (outputs to truthtable/)
 npm run test      # run tests
+npm audit         # audit production and development dependencies
+```
+
+The Vitest suite includes DOM-level regression coverage through jsdom for formula replacement/removal and quiz dependency state transitions.
+
+## Deployment
+
+```bash
+npm run build
+scp -r truthtable/* fitelson.org:/home/fitelson/www/www/truthtable/
 ```
 
 ## Tech Stack
